@@ -1,12 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
-    <shortcut android:shortcutId="new_observation" android:enabled="true" android:icon="@drawable/ic_shortcut_add" android:shortcutShortLabel="Nouvelle observation" android:shortcutLongLabel="Saisir une nouvelle observation">
-        <intent android:action="android.intent.action.VIEW" android:targetPackage="fr.carnetfaune.app" android:targetClass="fr.carnetfaune.app.MainActivity" android:data="carnetfaune://new-observation" />
+
+    <shortcut
+        android:shortcutId="new_observation"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_add"
+        android:shortcutShortLabel="@string/shortcut_new_short"
+        android:shortcutLongLabel="@string/shortcut_new_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="fr.carnetfaune.app"
+            android:targetClass="fr.carnetfaune.app.MainActivity"
+            android:data="carnetfaune://new-observation" />
     </shortcut>
-    <shortcut android:shortcutId="map" android:enabled="true" android:icon="@drawable/ic_shortcut_map" android:shortcutShortLabel="Carte" android:shortcutLongLabel="Voir la carte des observations">
-        <intent android:action="android.intent.action.VIEW" android:targetPackage="fr.carnetfaune.app" android:targetClass="fr.carnetfaune.app.MainActivity" android:data="carnetfaune://map" />
+
+    <shortcut
+        android:shortcutId="map"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_map"
+        android:shortcutShortLabel="@string/shortcut_map_short"
+        android:shortcutLongLabel="@string/shortcut_map_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="fr.carnetfaune.app"
+            android:targetClass="fr.carnetfaune.app.MainActivity"
+            android:data="carnetfaune://map" />
     </shortcut>
-    <shortcut android:shortcutId="statistics" android:enabled="true" android:icon="@drawable/ic_shortcut_chart" android:shortcutShortLabel="Statistiques" android:shortcutLongLabel="Voir les statistiques">
-        <intent android:action="android.intent.action.VIEW" android:targetPackage="fr.carnetfaune.app" android:targetClass="fr.carnetfaune.app.MainActivity" android:data="carnetfaune://statistics" />
+
+    <shortcut
+        android:shortcutId="statistics"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_chart"
+        android:shortcutShortLabel="@string/shortcut_stats_short"
+        android:shortcutLongLabel="@string/shortcut_stats_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="fr.carnetfaune.app"
+            android:targetClass="fr.carnetfaune.app.MainActivity"
+            android:data="carnetfaune://statistics" />
     </shortcut>
+
 </shortcuts>
