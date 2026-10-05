@@ -25,11 +25,9 @@ jobs:
 
       - name: Installer Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Installer les composants Android nécessaires
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          accept-android-sdk-licenses: true
 
       - name: Installer Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
@@ -40,6 +38,8 @@ jobs:
         run: |
           java -version
           gradle --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -la "$ANDROID_HOME"
 
       - name: Compiler l'APK Debug
         run: gradle :app:assembleDebug --stacktrace --no-daemon
