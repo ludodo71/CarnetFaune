@@ -1,1 +1,12 @@
-<resources><string name="app_name">Carnet Faune</string></resources>
+<resources>
+    <string name="app_name">Carnet Faune</string>
+
+    <string name="shortcut_new_short">Nouvelle observation</string>
+    <string name="shortcut_new_long">Saisir une nouvelle observation</string>
+
+    <string name="shortcut_map_short">Carte</string>
+    <string name="shortcut_map_long">Voir la carte des observations</string>
+
+    <string name="shortcut_stats_short">Statistiques</string>
+    <string name="shortcut_stats_long">Voir les statistiques</string>
+</resources>
