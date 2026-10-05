@@ -1,0 +1,23 @@
+CARNET FAUNE - VERSION PRETE POUR GITHUB
+
+1. Décompresse ce ZIP sur ton PC.
+2. Ouvre ton dépôt GitHub CarnetFaune.
+3. Clique sur Add file > Upload files.
+4. Sélectionne TOUT le contenu du dossier décompressé, y compris le dossier caché .github.
+5. Vérifie que GitHub montre notamment :
+   .github/workflows/android-apk.yml
+   app/build.gradle.kts
+   build.gradle.kts
+   settings.gradle.kts
+6. Clique sur Commit changes.
+7. Va dans l'onglet Actions.
+8. Le workflow « Construire APK Android » doit apparaître.
+9. Ouvre le workflow et attends la fin de la compilation.
+10. Quand il est terminé avec une coche verte, ouvre l'exécution puis Artifacts.
+11. Télécharge « CarnetFaune-APK » : l'archive contient app-debug.apk.
+
+IMPORTANT : GitHub ne décompresse pas automatiquement un ZIP envoyé comme fichier.
+Il faut donc décompresser ce ZIP sur le PC puis envoyer son CONTENU au dépôt.
+
+Le workflow compile une version Debug installable pour les tests. Il ne nécessite
+aucune clé de signature Android.
