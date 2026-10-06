@@ -162,16 +162,81 @@ suspend fun AppRepository.speciesSnapshot():List<Species> = kotlinx.coroutines.f
     history?.let{(s,p)->HistoryDialog(s,p,obs.filter{o->o.speciesId==s.id&&o.placeId==p.id},{history=null},vm)}
 }
 
-@Composable private fun ExportButton(vm:MainVm){
-    val context=androidx.compose.ui.platform.LocalContext.current
-    val scope=rememberCoroutineScope()
-    IconButton(onClick={scope.launch{
-        val rows=vm.exportData(); val header="date;heure;espèce;nom_scientifique;groupe;lieu;nombre;température;meteo;habitat;comportement;sexe;stade;latitude;longitude;notes"
-        val csv=buildString{appendLine(header);rows.forEach{r->val o=r.o;appendLine(listOf(o.date,o.time,r.s.commonName,r.s.scientificName,r.s.group,r.p.name,o.count,o.temperatureC ?: "",o.weather,o.habitat,o.behavior,o.sex,o.lifeStage,o.latitude ?: r.p.latitude ?: "",o.longitude ?: r.p.longitude ?: "",o.note).joinToString(";"){it.toString().replace(";",",").replace("\n"," ")}}}
-        val file=File(context.cacheDir,"carnet-faune-export.csv");file.writeText("\uFEFF$csv")
-        val uri=FileProvider.getUriForFile(context,"fr.carnetfaune.app.fileprovider",file)
-        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/csv";putExtra(Intent.EXTRA_STREAM,uri);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)},"Exporter les observations"))
-    }){Icon(Icons.Default.FileDownload,"Exporter CSV")}
+@Composable
+private fun ExportButton(vm: MainVm) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    IconButton(onClick = {
+        scope.launch {
+            val rows = vm.exportData()
+
+            val header =
+                "date;heure;espèce;nom_scientifique;groupe;lieu;nombre;température;meteo;habitat;comportement;sexe;stade;latitude;longitude;notes"
+
+            val csv = buildString {
+                appendLine(header)
+
+                rows.forEach { r ->
+                    val o = r.o
+
+                    val line = listOf(
+                        o.date,
+                        o.time,
+                        r.s.commonName,
+                        r.s.scientificName,
+                        r.s.group,
+                        r.p.name,
+                        o.count,
+                        o.temperatureC ?: "",
+                        o.weather,
+                        o.habitat,
+                        o.behavior,
+                        o.sex,
+                        o.lifeStage,
+                        o.latitude ?: r.p.latitude ?: "",
+                        o.longitude ?: r.p.longitude ?: "",
+                        o.note
+                    ).joinToString(";") {
+                        it.toString()
+                            .replace(";", ",")
+                            .replace("\n", " ")
+                    }
+
+                    appendLine(line)
+                }
+            }
+
+            val file = File(
+                context.cacheDir,
+                "carnet-faune-export.csv"
+            )
+
+            file.writeText("\uFEFF$csv")
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "fr.carnetfaune.app.fileprovider",
+                file
+            )
+
+            context.startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/csv"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    },
+                    "Exporter les observations"
+                )
+            )
+        }
+    }) {
+        Icon(
+            Icons.Default.FileDownload,
+            "Exporter CSV"
+        )
+    }
 }
 
 @Composable private fun HeaderCell(text:String){Box(Modifier.height(48.dp).fillMaxWidth().background(MaterialTheme.colorScheme.primaryContainer).border(.5.dp,MaterialTheme.colorScheme.outlineVariant),contentAlignment=Alignment.CenterStart){Text(text,Modifier.padding(8.dp),fontSize=12.sp)}}
