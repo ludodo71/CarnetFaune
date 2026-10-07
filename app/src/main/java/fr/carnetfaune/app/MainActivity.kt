@@ -384,10 +384,209 @@ private fun readLastLocation(context:Context,onResult:(Double,Double)->Unit){
     locations.maxByOrNull{it.time}?.let{onResult(it.latitude,it.longitude)}
 }
 
-@Composable private fun ObservationDialog(s:Species,p:Place,onSave:(Observation)->Unit,onCancel:()->Unit){
-    var time by remember{mutableStateOf(LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))};var date by remember{mutableStateOf(LocalDate.now().toString())};var count by remember{mutableIntStateOf(1)};var note by remember{mutableStateOf("")};var temp by remember{mutableStateOf("")};var weather by remember{mutableStateOf("")};var habitat by remember{mutableStateOf(p.habitat)};var behavior by remember{mutableStateOf("")};var sex by remember{mutableStateOf("")};var stage by remember{mutableStateOf("")};var photo by remember{mutableStateOf<String?>(null)}
-    val picker=rememberLauncherForActivityResult(ActivityResultContracts.GetContent()){uri:Uri?->photo=uri?.toString()}
-    AlertDialog(onDismissRequest=onCancel,title={Text("Observation — ${s.commonName}")},text={Column(Modifier.heightIn(max=520.dp).verticalScroll(rememberScrollState())){Text(p.name,style=MaterialTheme.typography.labelLarge);Spacer(Modifier.height(6.dp));OutlinedTextField(date,{date=it},label={Text("Date")},singleLine=true);OutlinedTextField(time,{time=it},label={Text("Heure")},singleLine=true);OutlinedTextField(count.toString(),{count=it.toIntOrNull()?.coerceAtLeast(1)?:1},label={Text("Nombre d'individus")},singleLine=true);OutlinedTextField(temp,{temp=it},label={Text("Température °C")},singleLine=true);OutlinedTextField(weather,{weather=it},label={Text("Météo")},singleLine=true);OutlinedTextField(habitat,{habitat=it},label={Text("Habitat")},singleLine=true);OutlinedTextField(behavior,{behavior=it},label={Text("Comportement")},singleLine=true);OutlinedTextField(sex,{sex=it},label={Text("Sexe")},singleLine=true);OutlinedTextField(stage,{stage=it},label={Text("Stade / âge")},singleLine=true);OutlinedTextField(note,{note=it},label={Text("Notes")},minLines=3);Row(verticalAlignment=Alignment.CenterVertically){Button(onClick={picker.launch("image/*")}){Text(if(photo==null)"Ajouter une photo" else "Photo sélectionnée")}}}},confirmButton={Button(onClick={onSave(Observation(speciesId=s.id,placeId=p.id,date=date,time=time,count=count,note=note,temperatureC=temp.toDoubleOrNull(),weather=weather,habitat=habitat,behavior=behavior,sex=sex,lifeStage=stage,latitude=p.latitude,longitude=p.longitude,photoUri=photo))}){Text("Enregistrer")}},dismissButton={TextButton(onClick=onCancel){Text("Annuler")}})
+@Composable
+private fun ObservationDialog(
+    s: Species,
+    p: Place,
+    onSave: (Observation) -> Unit,
+    onCancel: () -> Unit
+) {
+    var time by remember {
+        mutableStateOf(
+            LocalTime.now().format(
+                DateTimeFormatter.ofPattern("HH:mm")
+            )
+        )
+    }
+
+    var date by remember {
+        mutableStateOf(LocalDate.now().toString())
+    }
+
+    var count by remember {
+        mutableIntStateOf(1)
+    }
+
+    var note by remember { mutableStateOf("") }
+    var temp by remember { mutableStateOf("") }
+    var weather by remember { mutableStateOf("") }
+    var habitat by remember { mutableStateOf(p.habitat) }
+    var behavior by remember { mutableStateOf("") }
+    var sex by remember { mutableStateOf("") }
+    var stage by remember { mutableStateOf("") }
+    var photo by remember { mutableStateOf<String?>(null) }
+
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        photo = uri?.toString()
+    }
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+
+        title = {
+            Text("Observation — " + s.commonName)
+        },
+
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+
+                Text(
+                    p.name,
+                    style = MaterialTheme.typography.labelLarge
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = { date = it },
+                    label = { Text("Date") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = { time = it },
+                    label = { Text("Heure") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = count.toString(),
+                    onValueChange = {
+                        count =
+                            it.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                    },
+                    label = {
+                        Text("Nombre d'individus")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = temp,
+                    onValueChange = { temp = it },
+                    label = {
+                        Text("Température °C")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = weather,
+                    onValueChange = { weather = it },
+                    label = {
+                        Text("Météo")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = habitat,
+                    onValueChange = { habitat = it },
+                    label = {
+                        Text("Habitat")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = behavior,
+                    onValueChange = { behavior = it },
+                    label = {
+                        Text("Comportement")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = sex,
+                    onValueChange = { sex = it },
+                    label = {
+                        Text("Sexe")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = stage,
+                    onValueChange = { stage = it },
+                    label = {
+                        Text("Stade / âge")
+                    },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = {
+                        Text("Notes")
+                    },
+                    minLines = 3
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            picker.launch("image/*")
+                        }
+                    ) {
+                        Text(
+                            if (photo == null)
+                                "Ajouter une photo"
+                            else
+                                "Photo sélectionnée"
+                        )
+                    }
+                }
+            }
+        },
+
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(
+                        Observation(
+                            speciesId = s.id,
+                            placeId = p.id,
+                            date = date,
+                            time = time,
+                            count = count,
+                            note = note,
+                            temperatureC = temp.toDoubleOrNull(),
+                            weather = weather,
+                            habitat = habitat,
+                            behavior = behavior,
+                            sex = sex,
+                            lifeStage = stage,
+                            latitude = p.latitude,
+                            longitude = p.longitude,
+                            photoUri = photo
+                        )
+                    )
+                }
+            ) {
+                Text("Enregistrer")
+            }
+        },
+
+        dismissButton = {
+            TextButton(
+                onClick = onCancel
+            ) {
+                Text("Annuler")
+            }
+        }
+    )
 }
 
 @Composable private fun HistoryDialog(s:Species,p:Place,items:List<Observation>,onCancel:()->Unit,vm:MainVm){AlertDialog(onDismissRequest=onCancel,title={Text("Historique — ${s.commonName}")},text={LazyColumn{items(items){o->Column(Modifier.fillMaxWidth().padding(vertical=7.dp)){Text("${o.date} • ${o.time} • ${o.count} individu(s)",style=MaterialTheme.typography.labelLarge);if(o.weather.isNotBlank())Text("${o.weather}${o.temperatureC?.let{" • $it °C"}?:""}");if(o.behavior.isNotBlank())Text("Comportement : ${o.behavior}");if(o.note.isNotBlank())Text(o.note);if(o.photoUri!=null)AsyncImage(Uri.parse(o.photoUri),contentDescription=null,modifier=Modifier.size(70.dp).clip(RoundedCornerShape(6.dp)))}}}},confirmButton={TextButton(onClick=onCancel){Text("Fermer")}})}
