@@ -243,11 +243,138 @@ private fun ExportButton(vm: MainVm) {
 @Composable private fun SpeciesRow(s:Species,vm:MainVm){var image by remember(s.id){mutableStateOf<String?>(s.imageUrl)};LaunchedEffect(s.id){if(image==null)vm.image(s.id){image=it}};Row(Modifier.height(64.dp).fillMaxWidth().border(.5.dp,MaterialTheme.colorScheme.outlineVariant).padding(5.dp),verticalAlignment=Alignment.CenterVertically){if(image!=null)AsyncImage(model=image,contentDescription=s.commonName,modifier=Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)))else Box(Modifier.size(48.dp).background(MaterialTheme.colorScheme.surfaceVariant,RoundedCornerShape(6.dp)));Column(Modifier.padding(start=8.dp)){Text(s.commonName,maxLines=1);Text(s.scientificName,fontSize=11.sp,maxLines=1)}}}
 @Composable private fun EmptyPlaces(onAdd:()->Unit){Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text("Crée ton premier lieu d'observation");Spacer(Modifier.height(12.dp));Button(onClick=onAdd){Icon(Icons.Default.Add,null);Spacer(Modifier.width(6.dp));Text("Ajouter un lieu")}}}
 
-@Composable private fun AddPlaceDialog(onAdd:(String,Double?,Double?,String)->Unit,onCancel:()->Unit){
-    val context=androidx.compose.ui.platform.LocalContext.current
-    var name by remember{mutableStateOf("")};var lat by remember{mutableStateOf("")};var lon by remember{mutableStateOf("")};var habitat by remember{mutableStateOf("")}
-    val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){result->if(result[Manifest.permission.ACCESS_FINE_LOCATION]==true||result[Manifest.permission.ACCESS_COARSE_LOCATION]==true){readLastLocation(context){a,b->lat=a.toString();lon=b.toString()}}}
-    AlertDialog(onDismissRequest=onCancel,title={Text("Nouveau lieu")},text={Column{OutlinedTextField(name,{name=it},label={Text("Nom du lieu")},singleLine=true);OutlinedTextField(lat,{lat=it},label={Text("Latitude (facultatif)")},singleLine=true);OutlinedTextField(lon,{lon=it},label={Text("Longitude (facultatif)")},singleLine=true);OutlinedTextField(habitat,{habitat=it},label={Text("Habitat principal")},singleLine=true);Spacer(Modifier.height(6.dp));TextButton(onClick={if(ActivityCompat.checkSelfPermission(context,Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED&&ActivityCompat.checkSelfPermission(context,Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED){permission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION))}else readLastLocation(context){a,b->lat=a.toString();lon=b.toString()}}){Icon(Icons.Default.Map,null);Spacer(Modifier.width(4.dp));Text("Utiliser ma position actuelle")}},confirmButton={Button(enabled=name.isNotBlank(),onClick={onAdd(name,lat.toDoubleOrNull(),lon.toDoubleOrNull(),habitat)}){Text("Créer")}},dismissButton={TextButton(onClick=onCancel){Text("Annuler")}})
+@Composable
+private fun AddPlaceDialog(
+    onAdd: (String, Double?, Double?, String) -> Unit,
+    onCancel: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var name by remember { mutableStateOf("") }
+    var lat by remember { mutableStateOf("") }
+    var lon by remember { mutableStateOf("") }
+    var habitat by remember { mutableStateOf("") }
+
+    val permission =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+            val granted =
+                result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+            if (granted) {
+                readLastLocation(context) { latitude, longitude ->
+                    lat = latitude.toString()
+                    lon = longitude.toString()
+                }
+            }
+        }
+
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Text("Nouveau lieu")
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom du lieu") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = lat,
+                    onValueChange = { lat = it },
+                    label = { Text("Latitude (facultatif)") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = lon,
+                    onValueChange = { lon = it },
+                    label = { Text("Longitude (facultatif)") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = habitat,
+                    onValueChange = { habitat = it },
+                    label = { Text("Habitat principal") },
+                    singleLine = true
+                )
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                TextButton(
+                    onClick = {
+                        val fineGranted =
+                            ActivityCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                        val coarseGranted =
+                            ActivityCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+
+                        if (!fineGranted && !coarseGranted) {
+                            permission.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        } else {
+                            readLastLocation(context) { latitude, longitude ->
+                                lat = latitude.toString()
+                                lon = longitude.toString()
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = null
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(4.dp)
+                    )
+
+                    Text("Utiliser ma position actuelle")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank(),
+                onClick = {
+                    onAdd(
+                        name,
+                        lat.toDoubleOrNull(),
+                        lon.toDoubleOrNull(),
+                        habitat
+                    )
+                }
+            ) {
+                Text("Créer")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onCancel
+            ) {
+                Text("Annuler")
+            }
+        }
+    )
 }
 
 private fun readLastLocation(context:Context,onResult:(Double,Double)->Unit){
