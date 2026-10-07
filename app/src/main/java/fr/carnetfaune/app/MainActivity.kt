@@ -37,6 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButton
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,8 +132,9 @@ class MainVm(private val repo: AppRepository) : ViewModel() {
 data class ObservationExport(val o:Observation,val s:Species,val p:Place)
 
 // Snapshot helpers kept local to the repository through Flow-first UI; used only by export.
-suspend fun AppRepository.placesSnapshot():List<Place> = kotlinx.coroutines.flow.first(places)
-suspend fun AppRepository.speciesSnapshot():List<Species> = kotlinx.coroutines.flow.first(species)
+// Line 134-135
+suspend fun AppRepository.placesSnapshot(): List<Place> = places.first()
+suspend fun AppRepository.speciesSnapshot(): List<Species> = species.first()
 
 @Composable fun CarnetFauneApp(vmRepo:AppRepository, initialDestination:String = "carnet"){
     val vm=remember{MainVm(vmRepo)}
@@ -156,8 +158,17 @@ suspend fun AppRepository.speciesSnapshot():List<Species> = kotlinx.coroutines.f
         OutlinedTextField(search,{search=it},label={Text("Rechercher une espèce")},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("TOUS","OISEAUX","MAMMIFÈRES","RONGEURS","REPTILES").forEach{g->FilterChip(selected=g==group,onClick={group=g},label={Text(g)})}}
         if(places.isEmpty())EmptyPlaces({placeDialog=true}) else Row(Modifier.horizontalScroll(rememberScrollState())){
-            Column(Modifier.width(205.dp)){HeaderCell("ESPÈCE");filtered.forEach{s->SpeciesRow(s,vm)}}
-            places.forEach{p->Column(Modifier.width(125.dp)){HeaderCell(p.name);filtered.forEach{s->{val matches=obs.filter{it.speciesId==s.id&&it.placeId==p.id};val total=matches.sumOf{it.count};Box(Modifier.height(64.dp).fillMaxWidth().border(.5.dp,MaterialTheme.colorScheme.outlineVariant).clickable{entry=s to p}.padding(5.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text(if(total==0)"—" else total.toString(),fontSize=18.sp);matches.maxByOrNull{it.date+it.time}?.let{Text(it.time,fontSize=11.sp)};if(matches.size>1)Text("${matches.size} passages",fontSize=9.sp)}};Box(Modifier.fillMaxWidth().height(1.dp).clickable{history=s to p}){}}}}}
+// Line 160 - Simplified version
+places.forEach { p ->
+    Column(Modifier.width(125.dp)) {
+        HeaderCell(p.name)
+        filtered.forEach { s ->
+            val matches = obs.filter { it.speciesId == s.id && it.placeId == p.id }
+            val total = matches.sumOf { it.count }
+            // ... rest of composable content
+        }
+    }
+}            places.forEach{p->Column(Modifier.width(125.dp)){HeaderCell(p.name);filtered.forEach{s->{val matches=obs.filter{it.speciesId==s.id&&it.placeId==p.id};val total=matches.sumOf{it.count};Box(Modifier.height(64.dp).fillMaxWidth().border(.5.dp,MaterialTheme.colorScheme.outlineVariant).clickable{entry=s to p}.padding(5.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text(if(total==0)"—" else total.toString(),fontSize=18.sp);matches.maxByOrNull{it.date+it.time}?.let{Text(it.time,fontSize=11.sp)};if(matches.size>1)Text("${matches.size} passages",fontSize=9.sp)}};Box(Modifier.fillMaxWidth().height(1.dp).clickable{history=s to p}){}}}}}
         }
     }
     if(placeDialog)AddPlaceDialog({n,lat,lon,h->vm.addPlace(n,lat,lon,h);placeDialog=false},{placeDialog=false})
