@@ -734,8 +734,15 @@ private fun CatalogScreen(vm: MainVm) {
         }
     }
 }
-@Composable private fun SpeciesDetail(s:Species,vm:MainVm,onClose:()->Unit){var image by remember{s.imageUrl?.let{mutableStateOf(it)}?:mutableStateOf<String?>(null)};LaunchedEffect(s.id){if(image==null)vm.image(s.id){image=it}};AlertDialog(onDismissRequest=onClose,title={Text(s.commonName)},text={Column(horizontalAlignment=Alignment.CenterHorizontally){if(image!=null)AsyncImage(model=image,contentDescription=s.commonName,modifier=Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)));Text(s.scientificName,style=MaterialTheme.typography.titleMedium);Text("Groupe : ${s.group}",fontSize=12.sp);Text("Identifiant TAXREF/GBIF : ${s.id}",fontSize=11.sp)}},confirmButton={TextButton(onClick=onClose){Text("Fermer")}})}
-
+@Composable private fun SpeciesDetail(s:Species,vm:MainVm,onClose:()->Unit){
+    var image by remember { mutableStateOf(s.imageUrl ?: "") }
+    LaunchedEffect(s.id){
+        if(image.isEmpty()) {
+            vm.image(s.id){ newImage -> image = newImage ?: "" }
+        }
+    }
+    // ... rest of the function
+}
 
 @Composable private fun MapScreen(vm:MainVm){
     val context=androidx.compose.ui.platform.LocalContext.current
