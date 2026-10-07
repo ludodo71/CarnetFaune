@@ -157,19 +157,22 @@ suspend fun AppRepository.speciesSnapshot(): List<Species> = species.first()
         Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Carnet d'observations",style=MaterialTheme.typography.headlineSmall);Text("${obs.size} observations enregistrées",fontSize=12.sp)}IconButton({placeDialog=true}){Icon(Icons.Default.Add,"Ajouter un lieu")};ExportButton(vm)}
         OutlinedTextField(search,{search=it},label={Text("Rechercher une espèce")},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("TOUS","OISEAUX","MAMMIFÈRES","RONGEURS","REPTILES").forEach{g->FilterChip(selected=g==group,onClick={group=g},label={Text(g)})}}
-        if(places.isEmpty())EmptyPlaces({placeDialog=true}) else Row(Modifier.horizontalScroll(rememberScrollState())){
-// Line 160 - Simplified version
-places.forEach { p ->
-    Column(Modifier.width(125.dp)) {
-        HeaderCell(p.name)
-        filtered.forEach { s ->
-            val matches = obs.filter { it.speciesId == s.id && it.placeId == p.id }
-            val total = matches.sumOf { it.count }
-            // ... rest of composable content
+      if(places.isEmpty()) {
+    EmptyPlaces({placeDialog=true})
+} else {
+    Row(Modifier.horizontalScroll(rememberScrollState())) {
+        places.forEach { p ->
+            Column(Modifier.width(125.dp)) {
+                HeaderCell(p.name)
+                filtered.forEach { s ->
+                    val matches = obs.filter { it.speciesId == s.id && it.placeId == p.id }
+                    val total = matches.sumOf { it.count }
+                    // Add the rest of your composable content here
+                }
+            }
         }
     }
-}            places.forEach{p->Column(Modifier.width(125.dp)){HeaderCell(p.name);filtered.forEach{s->{val matches=obs.filter{it.speciesId==s.id&&it.placeId==p.id};val total=matches.sumOf{it.count};Box(Modifier.height(64.dp).fillMaxWidth().border(.5.dp,MaterialTheme.colorScheme.outlineVariant).clickable{entry=s to p}.padding(5.dp),contentAlignment=Alignment.Center){Column(horizontalAlignment=Alignment.CenterHorizontally){Text(if(total==0)"—" else total.toString(),fontSize=18.sp);matches.maxByOrNull{it.date+it.time}?.let{Text(it.time,fontSize=11.sp)};if(matches.size>1)Text("${matches.size} passages",fontSize=9.sp)}};Box(Modifier.fillMaxWidth().height(1.dp).clickable{history=s to p}){}}}}}
-        }
+}
     }
     if(placeDialog)AddPlaceDialog({n,lat,lon,h->vm.addPlace(n,lat,lon,h);placeDialog=false},{placeDialog=false})
     entry?.let{(s,p)->ObservationDialog(s,p,{o->vm.addObservation(o);entry=null},{entry=null})}
