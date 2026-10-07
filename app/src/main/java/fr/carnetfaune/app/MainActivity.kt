@@ -154,7 +154,18 @@ suspend fun AppRepository.speciesSnapshot(): List<Species> = species.first()
     var search by remember{mutableStateOf("")}; var group by remember{mutableStateOf("TOUS")}; var placeDialog by remember{mutableStateOf(false)}; var entry by remember{mutableStateOf<Pair<Species,Place>?>(null)}; var history by remember{mutableStateOf<Pair<Species,Place>?>(null)}
     val filtered=species.filter{(group=="TOUS"||it.group==group)&&(search.isBlank()||it.commonName.contains(search,true)||it.scientificName.contains(search,true))}
     Column(Modifier.fillMaxSize()){
-        Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Carnet d'observations",style=MaterialTheme.typography.headlineSmall);Text("${obs.size} observations enregistrées",fontSize=12.sp)}IconButton({placeDialog=true}){Icon(Icons.Default.Add,"Ajouter un lieu")};ExportButton(vm)}
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(12.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column(Modifier.weight(1f)) {
+        Text(
+            "Carnet d'observations",
+            style = MaterialTheme.typography.headlineSmall
+        )
+    }
+    // Add other content here
+} 
         OutlinedTextField(search,{search=it},label={Text("Rechercher une espèce")},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("TOUS","OISEAUX","MAMMIFÈRES","RONGEURS","REPTILES").forEach{g->FilterChip(selected=g==group,onClick={group=g},label={Text(g)})}}
       if(places.isEmpty()) {
