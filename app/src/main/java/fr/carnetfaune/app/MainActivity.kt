@@ -595,8 +595,142 @@ private fun ObservationDialog(
 
 @Composable private fun HourChart(data:IntArray){val max=(data.maxOrNull()?:1).coerceAtLeast(1);Row(Modifier.fillMaxWidth().height(230.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(2.dp)){data.forEachIndexed{h,v->Column(Modifier.weight(1f).fillMaxHeight(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Bottom){if(v>0)Text(v.toString(),fontSize=8.sp);Box(Modifier.fillMaxWidth().fillMaxHeight(.78f*(v.toFloat()/max).coerceAtLeast(.02f)).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart=3.dp,topEnd=3.dp)));Text(h.toString(),fontSize=8.sp)}}}}
 
-@Composable private fun CatalogScreen(vm:MainVm){val species by vm.species.collectAsStateWithLifecycle(emptyList());var query by remember{mutableStateOf("")};var selected by remember{mutableStateOf<Species?>(null)};Column(Modifier.fillMaxSize().padding(16.dp)){Row(verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Catalogue naturaliste",style=MaterialTheme.typography.headlineSmall);Text("TAXREF via GBIF • synchronisation en ligne",fontSize=12.sp)}Button(onClick={vm.sync},enabled=!vm.syncing){Icon(Icons.Default.Refresh,null);Spacer(Modifier.width(5.dp));Text(if(vm.syncing)"Synchronisation…" else "Actualiser")}};if(vm.syncMessage.isNotBlank())Text(vm.syncMessage,fontSize=12.sp);Spacer(Modifier.height(8.dp));OutlinedTextField(query,{query=it},label={Text("Chercher une espèce")},singleLine=true,modifier=Modifier.fillMaxWidth());Text("${species.size} taxons chargés",Modifier.padding(vertical=8.dp));LazyColumn{items(species.filter{query.isBlank()||it.commonName.contains(query,true)||it.scientificName.contains(query,true)}.take(500)){s->Row(Modifier.fillMaxWidth().clickable{selected=s}.padding(vertical=7.dp),verticalAlignment=Alignment.CenterVertically){Text(s.commonName,Modifier.weight(1f));Text(s.group,fontSize=10.sp)}}}};selected?.let{s->SpeciesDetail(s,vm,{selected=null})}}
+@Composable
+private fun CatalogScreen(vm: MainVm) {
 
+    val species by vm.species.collectAsStateWithLifecycle(emptyList())
+
+    var query by remember {
+        mutableStateOf("")
+    }
+
+    var selected by remember {
+        mutableStateOf<Species?>(null)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Column(
+                Modifier.weight(1f)
+            ) {
+
+                Text(
+                    "Catalogue naturaliste",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Text(
+                    "TAXREF via GBIF • synchronisation en ligne",
+                    fontSize = 12.sp
+                )
+            }
+
+            Button(
+                onClick = vm::sync,
+                enabled = !vm.syncing
+            ) {
+
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = null
+                )
+
+                Spacer(
+                    Modifier.width(5.dp)
+                )
+
+                Text(
+                    if (vm.syncing)
+                        "Synchronisation…"
+                    else
+                        "Actualiser"
+                )
+            }
+        }
+
+        if (vm.syncMessage.isNotBlank()) {
+
+            Text(
+                vm.syncMessage,
+                fontSize = 12.sp
+            )
+        }
+
+        Spacer(
+            Modifier.height(8.dp)
+        )
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = {
+                query = it
+            },
+            label = {
+                Text("Chercher une espèce")
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            "${species.size} taxons chargés",
+            Modifier.padding(vertical = 8.dp)
+        )
+
+        LazyColumn {
+
+            items(
+                species
+                    .filter {
+                        query.isBlank() ||
+                            it.commonName.contains(query, true) ||
+                            it.scientificName.contains(query, true)
+                    }
+                    .take(500)
+            ) { s ->
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selected = s
+                        }
+                        .padding(vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        s.commonName,
+                        Modifier.weight(1f)
+                    )
+
+                    Text(
+                        s.group,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+    }
+
+    selected?.let { s ->
+
+        SpeciesDetail(
+            s,
+            vm
+        ) {
+            selected = null
+        }
+    }
+}
 @Composable private fun SpeciesDetail(s:Species,vm:MainVm,onClose:()->Unit){var image by remember{s.imageUrl?.let{mutableStateOf(it)}?:mutableStateOf<String?>(null)};LaunchedEffect(s.id){if(image==null)vm.image(s.id){image=it}};AlertDialog(onDismissRequest=onClose,title={Text(s.commonName)},text={Column(horizontalAlignment=Alignment.CenterHorizontally){if(image!=null)AsyncImage(model=image,contentDescription=s.commonName,modifier=Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)));Text(s.scientificName,style=MaterialTheme.typography.titleMedium);Text("Groupe : ${s.group}",fontSize=12.sp);Text("Identifiant TAXREF/GBIF : ${s.id}",fontSize=11.sp)}},confirmButton={TextButton(onClick=onClose){Text("Fermer")}})}
 
 
