@@ -10,8 +10,17 @@ class AppRepository(private val db: AppDatabase) {
     val species: Flow<List<Species>> = db.speciesDao().observeAll()
     val places: Flow<List<Place>> = db.placeDao().observeAll()
     val observations: Flow<List<Observation>> = db.observationDao().observeAll()
-    private val api = Retrofit.Builder().baseUrl("https://api.gbif.org/v1/").addConverterFactory(GsonConverterFactory.create()).build().create(GbifApi::class.java)
+    private val api = Retrofit.Builder()
+    .baseUrl("https://api.gbif.org/v1/")
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+    .create(GbifApi::class.java)
 
+private val taxrefApi = Retrofit.Builder()
+    .baseUrl("https://taxref.mnhn.fr/")
+    .addConverterFactory(GsonConverterFactory.create())
+    .build()
+    .create(TaxrefApi::class.java)
     suspend fun addPlace(name: String, lat: Double?, lon: Double?, habitat: String) = db.placeDao().insert(Place(name = name.trim(), latitude = lat, longitude = lon, habitat = habitat.trim()))
     suspend fun deletePlace(p: Place) = db.placeDao().delete(p)
     suspend fun addObservation(o: Observation) = db.observationDao().insert(o)
@@ -22,7 +31,32 @@ class AppRepository(private val db: AppDatabase) {
             .recoverCatching { api.occurrenceWithImage(speciesId).results.firstOrNull()?.media?.firstOrNull()?.identifier }
             .getOrNull()
     }
+private suspend fun frenchName(
+    taxonId: Long,
+    scientificName: String
+): String {
 
+    return runCatching {
+        val taxon = taxrefApi.getTaxon(taxonId)
+
+        taxon.vernacularNames
+            ?.firstOrNull {
+                it.language.equals("fr", ignoreCase = true) &&
+                !it.name.isNullOrBlank()
+            }
+            ?.name
+            ?.trim()
+            ?: taxon.vernacularNames
+                ?.firstOrNull {
+                    !it.name.isNullOrBlank()
+                }
+                ?.name
+                ?.trim()
+            ?: scientificName
+    }.getOrElse {
+        scientificName
+    }
+}
     suspend fun syncCatalog(onProgress: (String) -> Unit) = withContext(Dispatchers.IO) {
         val groups = listOf("Aves" to "OISEAUX", "Mammalia" to "MAMMIFÈRES", "Reptilia" to "REPTILES")
         val all = mutableListOf<Species>()
@@ -32,9 +66,30 @@ class AppRepository(private val db: AppDatabase) {
             var offset = 0
             do {
                 val page = api.searchSpecies(higherTaxonKey = higher.key, offset = offset)
-                page.results.filter { it.rank == "SPECIES" && it.taxonomicStatus == "ACCEPTED" }.forEach { t ->
-                    all += Species(t.key, t.vernacularName?.takeIf { it.isNotBlank() } ?: t.canonicalName.orEmpty(), t.canonicalName ?: t.scientificName.orEmpty(), group)
-                }
+               page.results
+    .filter {
+        it.rank == "SPECIES" &&
+        it.taxonomicStatus == "ACCEPTED"
+    }
+    .forEach { t ->
+
+        val scientificName =
+            t.canonicalName
+                ?: t.scientificName
+                ?: return@forEach
+
+        val commonName = frenchName(
+            taxonId = t.key,
+            scientificName = scientificName
+        )
+
+        all += Species(
+            id = t.key,
+            commonName = commonName,
+            scientificName = scientificName,
+            group = group
+        )
+    }
                 offset += page.results.size
             } while (!page.endOfRecords && page.results.isNotEmpty())
         }
@@ -43,9 +98,30 @@ class AppRepository(private val db: AppDatabase) {
             var offset = 0
             do {
                 val page = api.searchSpecies(higherTaxonKey = rodentOrder.key, offset = offset)
-                page.results.filter { it.rank == "SPECIES" && it.taxonomicStatus == "ACCEPTED" }.forEach { t ->
-                    all += Species(t.key, t.vernacularName?.takeIf { it.isNotBlank() } ?: t.canonicalName.orEmpty(), t.canonicalName ?: t.scientificName.orEmpty(), "RONGEURS")
-                }
+               page.results
+    .filter {
+        it.rank == "SPECIES" &&
+        it.taxonomicStatus == "ACCEPTED"
+    }
+    .forEach { t ->
+
+        val scientificName =
+            t.canonicalName
+                ?: t.scientificName
+                ?: return@forEach
+
+        val commonName = frenchName(
+            taxonId = t.key,
+            scientificName = scientificName
+        )
+
+        all += Species(
+            id = t.key,
+            commonName = commonName,
+            scientificName = scientificName,
+            group = "RONGEURS"
+        )
+    }
                 offset += page.results.size
             } while (!page.endOfRecords && page.results.isNotEmpty())
         }
