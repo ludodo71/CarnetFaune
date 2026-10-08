@@ -149,45 +149,360 @@ suspend fun AppRepository.speciesSnapshot(): List<Species> = species.first()
     }}){pad->Box(Modifier.padding(pad).fillMaxSize()){when(tab){0->ObservationSheet(vm);1->Charts(vm);2->MapScreen(vm);3->CalendarScreen(vm);4->GalleryScreen(vm);5->CatalogScreen(vm)}}}
 }
 
-@Composable private fun ObservationSheet(vm:MainVm){
-    val species by vm.species.collectAsStateWithLifecycle(emptyList()); val places by vm.places.collectAsStateWithLifecycle(emptyList()); val obs by vm.observations.collectAsStateWithLifecycle(emptyList())
-    var search by remember{mutableStateOf("")}; var group by remember{mutableStateOf("TOUS")}; var placeDialog by remember{mutableStateOf(false)}; var entry by remember{mutableStateOf<Pair<Species,Place>?>(null)}; var history by remember{mutableStateOf<Pair<Species,Place>?>(null)}
-    val filtered=species.filter{(group=="TOUS"||it.group==group)&&(search.isBlank()||it.commonName.contains(search,true)||it.scientificName.contains(search,true))}
-    Column(Modifier.fillMaxSize()){
-  Row(
-    modifier = Modifier.fillMaxWidth().padding(12.dp),
-    verticalAlignment = Alignment.CenterVertically
-) {
-    Column(Modifier.weight(1f)) {
-        Text(
-            "Carnet d'observations",
-            style = MaterialTheme.typography.headlineSmall
-        )
+@Composable
+private fun ObservationSheet(vm: MainVm) {
+
+    val species by vm.species.collectAsStateWithLifecycle(emptyList())
+    val places by vm.places.collectAsStateWithLifecycle(emptyList())
+    val obs by vm.observations.collectAsStateWithLifecycle(emptyList())
+
+    var search by remember {
+        mutableStateOf("")
     }
-    // Add other content here
-} 
-        OutlinedTextField(search,{search=it},label={Text("Rechercher une espèce")},singleLine=true,modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("TOUS","OISEAUX","MAMMIFÈRES","RONGEURS","REPTILES").forEach{g->FilterChip(selected=g==group,onClick={group=g},label={Text(g)})}}
-      if(places.isEmpty()) {
-    EmptyPlaces({placeDialog=true})
-} else {
-    Row(Modifier.horizontalScroll(rememberScrollState())) {
-        places.forEach { p ->
-            Column(Modifier.width(125.dp)) {
-                HeaderCell(p.name)
-                filtered.forEach { s ->
-                    val matches = obs.filter { it.speciesId == s.id && it.placeId == p.id }
-                    val total = matches.sumOf { it.count }
-                    // Add the rest of your composable content here
+
+    var group by remember {
+        mutableStateOf("TOUS")
+    }
+
+    var placeDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var entry by remember {
+        mutableStateOf<Pair<Species, Place>?>(null)
+    }
+
+    var history by remember {
+        mutableStateOf<Pair<Species, Place>?>(null)
+    }
+
+    val filtered = species.filter {
+        (group == "TOUS" || it.group == group) &&
+            (
+                search.isBlank() ||
+                    it.commonName.contains(search, true) ||
+                    it.scientificName.contains(search, true)
+            )
+    }
+
+    Column(
+        Modifier.fillMaxSize()
+    ) {
+
+        // ─────────────────────────────
+        // EN-TÊTE
+        // ─────────────────────────────
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+            Column(
+                Modifier.weight(1f)
+            ) {
+
+                Text(
+                    "Carnet d'observations",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Text(
+                    "${obs.size} observation(s) enregistrée(s)",
+                    fontSize = 12.sp
+                )
+            }
+
+            IconButton(
+                onClick = {
+                    placeDialog = true
+                }
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Ajouter un lieu"
+                )
+            }
+
+            ExportButton(vm)
+        }
+
+        // ─────────────────────────────
+        // RECHERCHE
+        // ─────────────────────────────
+
+        OutlinedTextField(
+            value = search,
+            onValueChange = {
+                search = it
+            },
+            label = {
+                Text("Rechercher une espèce")
+            },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+        )
+
+        // ─────────────────────────────
+        // FILTRES
+        // ─────────────────────────────
+
+        Row(
+            Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+
+            listOf(
+                "TOUS",
+                "OISEAUX",
+                "MAMMIFÈRES",
+                "RONGEURS",
+                "REPTILES"
+            ).forEach { g ->
+
+                FilterChip(
+                    selected = g == group,
+                    onClick = {
+                        group = g
+                    },
+                    label = {
+                        Text(g)
+                    }
+                )
+            }
+        }
+
+        // ─────────────────────────────
+        // AUCUN LIEU
+        // ─────────────────────────────
+
+        if (places.isEmpty()) {
+
+            EmptyPlaces {
+                placeDialog = true
+            }
+
+        } else {
+
+            // ─────────────────────────
+            // LISTE DES LIEUX
+            // ─────────────────────────
+
+            LazyColumn(
+                Modifier.fillMaxSize()
+            ) {
+
+                items(filtered) { s ->
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                horizontal = 10.dp,
+                                vertical = 4.dp
+                            )
+                    ) {
+
+                        Column(
+                            Modifier.padding(10.dp)
+                        ) {
+
+                            Row(
+                                verticalAlignment =
+                                    Alignment.CenterVertically
+                            ) {
+
+                                Column(
+                                    Modifier.weight(1f)
+                                ) {
+
+                                    Text(
+                                        s.commonName,
+                                        style =
+                                            MaterialTheme
+                                                .typography
+                                                .titleMedium
+                                    )
+
+                                    Text(
+                                        s.scientificName,
+                                        fontSize = 11.sp
+                                    )
+
+                                    Text(
+                                        s.group,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+
+                            Spacer(
+                                Modifier.height(8.dp)
+                            )
+
+                            // ─────────────────
+                            // LIEUX
+                            // ─────────────────
+
+                            places.forEach { p ->
+
+                                val matches =
+                                    obs.filter {
+                                        it.speciesId == s.id &&
+                                            it.placeId == p.id
+                                    }
+
+                                val total =
+                                    matches.sumOf {
+                                        it.count
+                                    }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            vertical = 3.dp
+                                        ),
+                                    verticalAlignment =
+                                        Alignment.CenterVertically
+                                ) {
+
+                                    Column(
+                                        Modifier.weight(1f)
+                                    ) {
+
+                                        Text(
+                                            p.name,
+                                            style =
+                                                MaterialTheme
+                                                    .typography
+                                                    .labelLarge
+                                        )
+
+                                        if (total > 0) {
+
+                                            Text(
+                                                "$total individu(s) observé(s)",
+                                                fontSize = 11.sp
+                                            )
+                                        } else {
+
+                                            Text(
+                                                "Aucune observation",
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            entry = s to p
+                                        }
+                                    ) {
+
+                                        Icon(
+                                            Icons.Default.Add,
+                                            contentDescription = null
+                                        )
+
+                                        Spacer(
+                                            Modifier.width(4.dp)
+                                        )
+
+                                        Text("Observer")
+                                    }
+
+                                    if (matches.isNotEmpty()) {
+
+                                        TextButton(
+                                            onClick = {
+                                                history = s to p
+                                            }
+                                        ) {
+
+                                            Text("Historique")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-}
+
+    // ─────────────────────────────────
+    // DIALOGUE : NOUVEAU LIEU
+    // ─────────────────────────────────
+
+    if (placeDialog) {
+
+        AddPlaceDialog(
+            onAdd = { name, lat, lon, habitat ->
+
+                vm.addPlace(
+                    name,
+                    lat,
+                    lon,
+                    habitat
+                )
+
+                placeDialog = false
+            },
+            onCancel = {
+                placeDialog = false
+            }
+        )
     }
-    if(placeDialog)AddPlaceDialog({n,lat,lon,h->vm.addPlace(n,lat,lon,h);placeDialog=false},{placeDialog=false})
-    entry?.let{(s,p)->ObservationDialog(s,p,{o->vm.addObservation(o);entry=null},{entry=null})}
-    history?.let{(s,p)->HistoryDialog(s,p,obs.filter{o->o.speciesId==s.id&&o.placeId==p.id},{history=null},vm)}
+
+    // ─────────────────────────────────
+    // DIALOGUE : NOUVELLE OBSERVATION
+    // ─────────────────────────────────
+
+    entry?.let { (s, p) ->
+
+        ObservationDialog(
+            s = s,
+            p = p,
+            onSave = { observation ->
+
+                vm.addObservation(observation)
+
+                entry = null
+            },
+            onCancel = {
+
+                entry = null
+            }
+        )
+    }
+
+    // ─────────────────────────────────
+    // HISTORIQUE
+    // ─────────────────────────────────
+
+    history?.let { (s, p) ->
+
+        HistoryDialog(
+            s = s,
+            p = p,
+            items = obs.filter {
+                it.speciesId == s.id &&
+                    it.placeId == p.id
+            },
+            onCancel = {
+                history = null
+            },
+            vm = vm
+        )
+    }
 }
 
 @Composable
