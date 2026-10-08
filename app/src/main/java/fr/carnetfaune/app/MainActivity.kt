@@ -176,14 +176,13 @@ private fun ObservationSheet(vm: MainVm) {
         mutableStateOf<Pair<Species, Place>?>(null)
     }
 
-    val filtered = species.filter {
-        (group == "TOUS" || it.group == group) &&
-            (
-                search.isBlank() ||
-                    it.commonName.contains(search, true) ||
-                    it.scientificName.contains(search, true)
-            )
-    }
+   val filtered = species.filter {
+    (group == "TOUS" || it.group == group) &&
+        (
+            search.isBlank() ||
+            it.commonName.contains(search.trim(), true)
+        )
+}
 
     Column(
         Modifier.fillMaxSize()
@@ -239,7 +238,7 @@ private fun ObservationSheet(vm: MainVm) {
                 search = it
             },
             label = {
-                Text("Rechercher une espèce")
+               Text("Rechercher un animal (ex. renard)")
             },
             singleLine = true,
             modifier = Modifier
@@ -1017,8 +1016,8 @@ private fun CatalogScreen(vm: MainVm) {
                 query = it
             },
             label = {
-                Text("Chercher une espèce")
-            },
+    Text("Rechercher par nom commun")
+},
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -1033,10 +1032,9 @@ private fun CatalogScreen(vm: MainVm) {
             items(
                 species
                     .filter {
-                        query.isBlank() ||
-                            it.commonName.contains(query, true) ||
-                            it.scientificName.contains(query, true)
-                    }
+    query.isBlank() ||
+        it.commonName.contains(query.trim(), true)
+}
                     .take(500)
             ) { s ->
 
@@ -1074,14 +1072,238 @@ private fun CatalogScreen(vm: MainVm) {
         }
     }
 }
-@Composable private fun SpeciesDetail(s:Species,vm:MainVm,onClose:()->Unit){
-    var image by remember { mutableStateOf(s.imageUrl ?: "") }
-    LaunchedEffect(s.id){
-        if(image.isEmpty()) {
-            vm.image(s.id){ newImage -> image = newImage ?: "" }
+@Composable
+private fun SpeciesDetail(
+    s: Species,
+    vm: MainVm,
+    onClose: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val observations by vm.observations.collectAsStateWithLifecycle(emptyList())
+    val places by vm.places.collectAsStateWithLifecycle(emptyList())
+
+    var image by remember(s.id) {
+        mutableStateOf(s.imageUrl ?: "")
+    }
+
+    LaunchedEffect(s.id) {
+        if (image.isBlank()) {
+            vm.image(s.id) { newImage ->
+                image = newImage.orEmpty()
+            }
         }
     }
-    // ... rest of the function
+
+    // Observations concernant uniquement cette espèce
+    val speciesObservations = observations.filter {
+        it.speciesId == s.id
+    }
+
+    // Nombre total d'individus observés
+    val totalIndividuals = speciesObservations.sumOf {
+        it.count
+    }
+
+    // Lieux où cette espèce a été observée
+    val observedPlaces = places.filter { place ->
+        speciesObservations.any {
+            it.placeId == place.id
+        }
+    }
+
+    // Dernière observation
+    val lastObservation = speciesObservations.maxByOrNull {
+        "${it.date} ${it.time}"
+    }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+
+        title = {
+            Text(
+                text = s.commonName,
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+
+                // IMAGE
+                if (image.isNotBlank()) {
+                    AsyncImage(
+                        model = image,
+                        contentDescription = s.commonName,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(12.dp)
+                    )
+                }
+
+                // NOM
+                Text(
+                    text = s.commonName,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(
+                    modifier = Modifier.height(4.dp)
+                )
+
+                // NOM SCIENTIFIQUE
+                Text(
+                    text = s.scientificName,
+                    fontSize = 14.sp
+                )
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+
+                // GROUPE
+                Text(
+                    text = "Groupe : ${s.group}",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
+
+                // MES OBSERVATIONS
+                Text(
+                    text = "Mes observations",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    text = "${speciesObservations.size} observation(s)"
+                )
+
+                Text(
+                    text = "$totalIndividuals individu(s) observé(s)"
+                )
+
+                // DERNIERE OBSERVATION
+                if (lastObservation != null) {
+                    Spacer(
+                        modifier = Modifier.height(6.dp)
+                    )
+
+                    Text(
+                        text = "Dernière observation : " +
+                                "${lastObservation.date} à ${lastObservation.time}"
+                    )
+                }
+
+                // LIEUX
+                if (observedPlaces.isNotEmpty()) {
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+
+                    Text(
+                        text = "Lieux d'observation",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(4.dp)
+                    )
+
+                    observedPlaces.forEach { place ->
+                        Text(
+                            text = "• ${place.name}"
+                        )
+                    }
+                }
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
+
+                // INFORMATIONS TAXONOMIQUES
+                Text(
+                    text = "Informations",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(
+                    modifier = Modifier.height(6.dp)
+                )
+
+                Text(
+                    text = "Nom commun : ${s.commonName}"
+                )
+
+                Text(
+                    text = "Nom scientifique : ${s.scientificName}"
+                )
+
+                Text(
+                    text = "Groupe : ${s.group}"
+                )
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Text(
+                    text = "Source taxonomique : GBIF / TAXREF",
+                    fontSize = 12.sp
+                )
+            }
+        },
+
+        // BOUTON GBIF
+        confirmButton = {
+
+            Button(
+                onClick = {
+
+                    val url =
+                        s.sourceUrl?.takeIf {
+                            it.isNotBlank()
+                        }
+                            ?: "https://www.gbif.org/species/${s.id}"
+
+                    context.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(url)
+                        )
+                    )
+                }
+            ) {
+                Text("Voir sur GBIF")
+            }
+        },
+
+        // FERMER
+        dismissButton = {
+
+            TextButton(
+                onClick = onClose
+            ) {
+                Text("Fermer")
+            }
+        }
+    )
 }
 
 @Composable private fun MapScreen(vm:MainVm){
