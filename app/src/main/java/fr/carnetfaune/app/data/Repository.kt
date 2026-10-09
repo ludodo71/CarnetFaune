@@ -103,51 +103,66 @@ class AppRepository(private val db: AppDatabase) {
     // NOM FRANÇAIS TAXREF
     // ------------------------------------------------------------
 
-    private suspend fun frenchName(
-        scientificName: String
-    ): String = withContext(Dispatchers.IO) {
+   
+private suspend fun frenchName(
+    speciesId: Long,
+    scientificName: String
+): String = withContext(Dispatchers.IO) {
 
-        // 1. Recherche du nom scientifique dans TAXREF
-        val taxon = runCatching {
+    // 1. Chercher d'abord le nom français dans GBIF
+    val gbifNames = runCatching {
+        api.vernacularNames(speciesId)
+            .results
+            .orEmpty()
+    }.getOrDefault(emptyList())
 
-            taxrefApi
-                .fuzzyMatch(scientificName)
-                .embedded
-                ?.taxa
-                ?.firstOrNull()
-
-        }.getOrNull()
-
-        // 2. Recherche du meilleur nom français
-        val frenchName = taxon
-            ?.vernacularNames
-            ?.firstOrNull {
-                it.language.equals("fr", ignoreCase = true) &&
-                    !it.name.isNullOrBlank()
-            }
-            ?.name
-            ?.trim()
-
-        if (!frenchName.isNullOrBlank()) {
-            return@withContext frenchName
+    val frenchName = gbifNames
+        .filter {
+            val language = it.language.orEmpty()
+            (language.equals("fr", true) ||
+             language.equals("fra", true) ||
+             language.equals("fre", true)) &&
+                !it.vernacularName.isNullOrBlank()
         }
-
-        // 3. Certains résultats TAXREF peuvent avoir directement
-        //    vernacularName
-        val directName = taxon
-            ?.vernacularName
-            ?.takeIf { it.isNotBlank() }
-            ?.trim()
-
-        if (!directName.isNullOrBlank()) {
-            return@withContext directName
+        .sortedByDescending {
+            it.preferred == true
         }
+        .firstOrNull()
+        ?.vernacularName
+        ?.trim()
 
-        // 4. Si TAXREF ne possède pas de nom vernaculaire,
-        //    on garde le nom scientifique comme dernier recours.
-        scientificName
+    if (!frenchName.isNullOrBlank()) {
+        return@withContext frenchName
     }
 
+    // 2. En secours, rechercher dans TAXREF
+    val taxon = runCatching {
+        taxrefApi
+            .fuzzyMatch(scientificName)
+            .embedded
+            ?.taxa
+            ?.firstOrNull()
+    }.getOrNull()
+
+    val taxrefName = taxon
+        ?.vernacularNames
+        ?.firstOrNull {
+            it.language.equals("fr", ignoreCase = true) &&
+                !it.name.isNullOrBlank()
+        }
+        ?.name
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+
+    if (taxrefName != null) {
+        return@withContext taxrefName
+    }
+
+    taxon?.vernacularName
+        ?.takeIf { it.isNotBlank() }
+        ?.trim()
+        ?: scientificName
+}
     // ------------------------------------------------------------
     // SYNCHRONISATION DU CATALOGUE
     // ------------------------------------------------------------
