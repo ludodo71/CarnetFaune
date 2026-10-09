@@ -17,6 +17,15 @@ data class SearchResponse(
     val results: List<TaxonResult>
 )
 
+data class VernacularNamesResponse(
+    val results: List<GbifVernacularName>?
+)
+
+data class GbifVernacularName(
+    val vernacularName: String?,
+    val language: String?,
+    val preferred: Boolean?
+)
 data class TaxonResult(
     val key: Long,
     val scientificName: String?,
@@ -75,6 +84,10 @@ interface GbifApi {
         @Query("limit") limit: Int = 1
     ): MediaResponse
 
+@GET("species/{key}/vernacularNames")
+suspend fun vernacularNames(
+    @Path("key") key: Long
+): VernacularNamesResponse
     @GET("occurrence/search")
     suspend fun occurrenceWithImage(
         @Query("taxon_key") key: Long,
