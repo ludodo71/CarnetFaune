@@ -230,8 +230,9 @@ private suspend fun frenchName(
                     )
 
                     val commonName = frenchName(
-                        scientificName
-                    )
+    taxon.key,
+    scientificName
+)
 
                     all += Species(
                         id = taxon.key,
@@ -296,8 +297,9 @@ private suspend fun frenchName(
                     )
 
                     val commonName = frenchName(
-                        scientificName
-                    )
+    taxon.key,
+    scientificName
+)
 
                     all += Species(
                         id = taxon.key,
