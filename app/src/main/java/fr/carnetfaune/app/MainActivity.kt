@@ -933,9 +933,356 @@ private fun ObservationDialog(
 
 @Composable private fun HistoryDialog(s:Species,p:Place,items:List<Observation>,onCancel:()->Unit,vm:MainVm){AlertDialog(onDismissRequest=onCancel,title={Text("Historique — ${s.commonName}")},text={LazyColumn{items(items){o->Column(Modifier.fillMaxWidth().padding(vertical=7.dp)){Text("${o.date} • ${o.time} • ${o.count} individu(s)",style=MaterialTheme.typography.labelLarge);if(o.weather.isNotBlank())Text("${o.weather}${o.temperatureC?.let{" • $it °C"}?:""}");if(o.behavior.isNotBlank())Text("Comportement : ${o.behavior}");if(o.note.isNotBlank())Text(o.note);if(o.photoUri!=null)AsyncImage(Uri.parse(o.photoUri),contentDescription=null,modifier=Modifier.size(70.dp).clip(RoundedCornerShape(6.dp)))}}}},confirmButton={TextButton(onClick=onCancel){Text("Fermer")}})}
 
-@Composable private fun Charts(vm:MainVm){val places by vm.places.collectAsStateWithLifecycle(emptyList());val species by vm.species.collectAsStateWithLifecycle(emptyList());val obs by vm.observations.collectAsStateWithLifecycle(emptyList());var selected by remember{mutableStateOf<Long?>(null)};var selectedSpecies by remember{mutableStateOf<Long?>(null)};Column(Modifier.fillMaxSize().padding(16.dp)){Text("Analyses",style=MaterialTheme.typography.headlineSmall);Text("Les graphiques utilisent uniquement tes observations enregistrées.",fontSize=12.sp);Spacer(Modifier.height(12.dp));Text("Lieu",style=MaterialTheme.typography.labelLarge);Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){FilterChip(selected==null,{selected=null},{Text("Tous")});places.forEach{FilterChip(selected==it.id,{selected=it.id},{Text(it.name)})}};Spacer(Modifier.height(8.dp));Text("Espèce",style=MaterialTheme.typography.labelLarge);Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)){FilterChip(selectedSpecies==null,{selectedSpecies=null},{Text("Toutes")});species.take(30).forEach{FilterChip(selectedSpecies==it.id,{selectedSpecies=it.id},{Text(it.commonName)})}};Spacer(Modifier.height(16.dp));val data=IntArray(24);obs.filter{(selected==null||it.placeId==selected)&&(selectedSpecies==null||it.speciesId==selectedSpecies)}.forEach{it.time.take(2).toIntOrNull()?.let{h->if(h in 0..23)data[h]+=it.count}};HourChart(data);Spacer(Modifier.height(18.dp));Text("Total d'individus par heure",style=MaterialTheme.typography.titleMedium);Text("Tu peux comparer les lieux et les espèces pour repérer les périodes d'activité.",fontSize=12.sp)}}
+```kotlin
+@Composable
+private fun Charts(vm: MainVm) {
+    val places by vm.places.collectAsStateWithLifecycle(emptyList())
+    val species by vm.species.collectAsStateWithLifecycle(emptyList())
+    val obs by vm.observations.collectAsStateWithLifecycle(emptyList())
 
-@Composable private fun HourChart(data:IntArray){val max=(data.maxOrNull()?:1).coerceAtLeast(1);Row(Modifier.fillMaxWidth().height(230.dp),verticalAlignment=Alignment.Bottom,horizontalArrangement=Arrangement.spacedBy(2.dp)){data.forEachIndexed{h,v->Column(Modifier.weight(1f).fillMaxHeight(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Bottom){if(v>0)Text(v.toString(),fontSize=8.sp);Box(Modifier.fillMaxWidth().fillMaxHeight(.78f*(v.toFloat()/max).coerceAtLeast(.02f)).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart=3.dp,topEnd=3.dp)));Text(h.toString(),fontSize=8.sp)}}}}
+    var selectedPlace by remember { mutableStateOf<Long?>(null) }
+    var selectedSpecies by remember { mutableStateOf<Long?>(null) }
+    var selectedDate by remember { mutableStateOf<String?>(null) }
+
+    // Ne proposer que les espèces déjà observées
+    val observedSpeciesIds = obs.map { it.speciesId }.toSet()
+    val observedSpecies = species
+        .filter { it.id in observedSpeciesIds }
+        .sortedBy { it.commonName }
+
+    // Appliquer les filtres du lieu et de l'espèce
+    val filteredObservations = obs.filter {
+        (selectedPlace == null || it.placeId == selectedPlace) &&
+        (selectedSpecies == null || it.speciesId == selectedSpecies)
+    }
+
+    // Nombre d'observations enregistrées pour chaque jour
+    val dailyCounts = filteredObservations
+        .groupBy { it.date }
+        .toSortedMap()
+
+    // Ne conserver le jour sélectionné que s'il correspond aux filtres
+    val activeDate = selectedDate?.takeIf {
+        it in dailyCounts.keys
+    }
+
+    val dayObservations = activeDate?.let { date ->
+        filteredObservations.filter { it.date == date }
+    }.orEmpty()
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            "Analyses",
+            style = MaterialTheme.typography.headlineSmall
+        )
+
+        Text(
+            "Analyse de tes observations par jour et par heure.",
+            fontSize = 12.sp
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // FILTRE PAR LIEU
+        Text("Lieu", style = MaterialTheme.typography.labelLarge)
+
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            FilterChip(
+                selected = selectedPlace == null,
+                onClick = { selectedPlace = null },
+                label = { Text("Tous") }
+            )
+
+            places.forEach { place ->
+                FilterChip(
+                    selected = selectedPlace == place.id,
+                    onClick = { selectedPlace = place.id },
+                    label = { Text(place.name) }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // FILTRE PAR ESPÈCE : UNIQUEMENT LES ESPÈCES OBSERVÉES
+        Text("Espèce", style = MaterialTheme.typography.labelLarge)
+
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            FilterChip(
+                selected = selectedSpecies == null,
+                onClick = { selectedSpecies = null },
+                label = { Text("Toutes") }
+            )
+
+            observedSpecies.forEach { animal ->
+                FilterChip(
+                    selected = selectedSpecies == animal.id,
+                    onClick = {
+                        selectedSpecies = animal.id
+                    },
+                    label = { Text(animal.commonName) }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+
+        // GRAPHIQUE PRINCIPAL : OBSERVATIONS PAR JOUR
+        Text(
+            "Nombre d'observations par jour",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            "Appuie sur une barre pour afficher le détail de la journée.",
+            fontSize = 12.sp
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        if (dailyCounts.isEmpty()) {
+            Text("Aucune observation pour ces filtres.")
+        } else {
+            DailyChart(
+                dailyCounts = dailyCounts,
+                selectedDate = activeDate,
+                onDateSelected = { selectedDate = it }
+            )
+        }
+
+        // GRAPHIQUE DÉTAILLÉ DU JOUR SÉLECTIONNÉ
+        if (activeDate != null) {
+            Spacer(Modifier.height(24.dp))
+
+            Text(
+                "Détail du $activeDate",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                "${dayObservations.size} observation(s) enregistrée(s)",
+                fontSize = 12.sp
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            HourSpeciesChart(
+                observations = dayObservations,
+                species = species
+            )
+        }
+    }
+}
+
+@Composable
+private fun DailyChart(
+    dailyCounts: Map<String, List<Observation>>,
+    selectedDate: String?,
+    onDateSelected: (String) -> Unit
+) {
+    val maxCount = (dailyCounts.values.maxOfOrNull { it.size } ?: 1)
+        .coerceAtLeast(1)
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .height(190.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        dailyCounts.forEach { (date, observations) ->
+            val count = observations.size
+            val isSelected = date == selectedDate
+
+            Column(
+                Modifier
+                    .width(48.dp)
+                    .fillMaxHeight()
+                    .clickable { onDateSelected(date) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Text(
+                    count.toString(),
+                    fontSize = 11.sp
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(
+                            (110f * count / maxCount)
+                                .coerceAtLeast(4f).dp
+                        )
+                        .background(
+                            if (isSelected)
+                                MaterialTheme.colorScheme.tertiary
+                            else
+                                MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(
+                                topStart = 5.dp,
+                                topEnd = 5.dp
+                            )
+                        )
+                )
+
+                Spacer(Modifier.height(5.dp))
+
+                Text(
+                    date.takeLast(2) + "/" + date.substring(5, 7),
+                    fontSize = 10.sp,
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.tertiary
+                    else
+                        MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HourSpeciesChart(
+    observations: List<Observation>,
+    species: List<Species>
+) {
+    // Regrouper les observations par heure
+    val observationsByHour = observations
+        .mapNotNull { observation ->
+            val hour = observation.time.take(2).toIntOrNull()
+            if (hour != null && hour in 0..23) {
+                hour to observation
+            } else {
+                null
+            }
+        }
+        .groupBy({ it.first }, { it.second })
+
+    val maxCount = (observationsByHour.values.maxOfOrNull { it.size } ?: 1)
+        .coerceAtLeast(1)
+
+    Text(
+        "Observations par heure",
+        style = MaterialTheme.typography.titleSmall
+    )
+
+    // GRAPHIQUE HORAIRE
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .height(150.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        (0..23).forEach { hour ->
+            val count = observationsByHour[hour]?.size ?: 0
+
+            Column(
+                Modifier
+                    .width(32.dp)
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                if (count > 0) {
+                    Text(count.toString(), fontSize = 9.sp)
+                }
+
+                Spacer(Modifier.height(3.dp))
+
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(
+                            if (count == 0) 2.dp
+                            else (85f * count / maxCount)
+                                .coerceAtLeast(4f).dp
+                        )
+                        .background(
+                            if (count == 0)
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(
+                                topStart = 3.dp,
+                                topEnd = 3.dp
+                            )
+                        )
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    hour.toString().padStart(2, '0'),
+                    fontSize = 9.sp
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+
+    // ESPÈCES OBSERVÉES À CHAQUE HEURE
+    Text(
+        "Espèces observées à chaque heure",
+        style = MaterialTheme.typography.titleSmall
+    )
+
+    if (observationsByHour.isEmpty()) {
+        Text(
+            "Aucune heure valide enregistrée pour cette journée.",
+            fontSize = 12.sp
+        )
+    } else {
+        observationsByHour.toSortedMap().forEach { (hour, hourObservations) ->
+            val speciesCounts = hourObservations
+                .groupingBy { it.speciesId }
+                .eachCount()
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+            ) {
+                Text(
+                    "${hour.toString().padStart(2, '0')} h — " +
+                        "${hourObservations.size} observation(s)",
+                    style = MaterialTheme.typography.labelLarge
+                )
+
+                speciesCounts.forEach { (speciesId, count) ->
+                    val animal = species.firstOrNull {
+                        it.id == speciesId
+                    }
+
+                    Text(
+                        "• ${animal?.commonName ?: "Espèce inconnue"}" +
+                            if (count > 1) " ($count observations)" else "",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            HorizontalDivider()
+        }
+    }
+}
+```
 
 @Composable
 private fun CatalogScreen(vm: MainVm) {
