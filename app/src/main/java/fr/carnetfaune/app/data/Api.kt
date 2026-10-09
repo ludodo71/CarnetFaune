@@ -1,5 +1,6 @@
 package fr.carnetfaune.app.data
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -87,7 +88,9 @@ interface GbifApi {
 // TAXREF
 // ------------------------------------------------------------
 
+
 data class TaxrefSearchResponse(
+    @SerializedName("_embedded")
     val embedded: TaxrefEmbedded?
 )
 
