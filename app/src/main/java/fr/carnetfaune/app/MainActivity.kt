@@ -933,7 +933,6 @@ private fun ObservationDialog(
 
 @Composable private fun HistoryDialog(s:Species,p:Place,items:List<Observation>,onCancel:()->Unit,vm:MainVm){AlertDialog(onDismissRequest=onCancel,title={Text("Historique — ${s.commonName}")},text={LazyColumn{items(items){o->Column(Modifier.fillMaxWidth().padding(vertical=7.dp)){Text("${o.date} • ${o.time} • ${o.count} individu(s)",style=MaterialTheme.typography.labelLarge);if(o.weather.isNotBlank())Text("${o.weather}${o.temperatureC?.let{" • $it °C"}?:""}");if(o.behavior.isNotBlank())Text("Comportement : ${o.behavior}");if(o.note.isNotBlank())Text(o.note);if(o.photoUri!=null)AsyncImage(Uri.parse(o.photoUri),contentDescription=null,modifier=Modifier.size(70.dp).clip(RoundedCornerShape(6.dp)))}}}},confirmButton={TextButton(onClick=onCancel){Text("Fermer")}})}
 
-```kotlin
 @Composable
 private fun Charts(vm: MainVm) {
     val places by vm.places.collectAsStateWithLifecycle(emptyList())
@@ -1282,7 +1281,7 @@ private fun HourSpeciesChart(
         }
     }
 }
-```
+
 
 @Composable
 private fun CatalogScreen(vm: MainVm) {
